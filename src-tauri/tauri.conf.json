@@ -1,0 +1,47 @@
+{
+  "$schema": "https://raw.githubusercontent.com/nicegui/tauri/main/crates/tauri-utils/schema.json",
+  "productName": "Open Island",
+  "version": "0.1.0",
+  "identifier": "app.openisland.OpenIsland",
+  "build": {
+    "beforeDevCommand": "npm run dev",
+    "beforeBuildCommand": "npm run build",
+    "devUrl": "http://localhost:1420",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "windows": [
+      {
+        "label": "main",
+        "title": "",
+        "width": 240,
+        "height": 36,
+        "resizable": false,
+        "transparent": true,
+        "decorations": false,
+        "visible": false,
+        "alwaysOnTop": true,
+        "skipTaskbar": true,
+        "shadow": false,
+        "center": false,
+        "url": "index.html"
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "icon": [
+      "icons/icon.ico"
+    ],
+    "resources": [],
+    "windows": {
+      "nsis": {
+        "installerIcon": "icons/icon.ico"
+      }
+    }
+  }
+}

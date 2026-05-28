@@ -1,0 +1,488 @@
+/* Open Island — Dynamic Island style expansion (vibeisland.app exact port) */
+
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+
+/* === vibeisland.app CSS Variables === */
+:root {
+  --v6-bg: #151518;
+  --v6-text: #e5e5e5;
+  --v6-muted: #888;
+  --v6-accent: #d97757;
+  --vi-idle: #22c55e;
+  --vi-idle-bright: #4ade80;
+  --vi-work: #3b82f6;
+  --vi-work-bright: #60a5fa;
+  --vi-alert: #f97316;
+  --vi-alert-bright: #fb923c;
+  --vi-question: #06b6d4;
+  --vi-question-bright: #22d3ee;
+  --vi-explore: #a855f7;
+  --vi-ended: #737373;
+  --v6-mono: "JetBrains Mono", ui-monospace, monospace;
+  --spring: cubic-bezier(.175, .885, .32, 1.1);
+  --spring-smooth: cubic-bezier(.32, .72, 0, 1);
+}
+
+/* === Reset === */
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: var(--v6-mono);
+  color: var(--v6-text);
+  background: transparent;
+  overflow: hidden;
+  user-select: none;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ============================================================
+   ISLAND CONTAINER
+   ============================================================ */
+.island-container {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-top: 0;
+}
+
+.backdrop {
+  position: fixed;
+  inset: 0;
+  background: transparent;
+  z-index: 0;
+}
+
+/* ============================================================
+   NOTCH — single element, transitions between all states
+   Uses width/height/border-radius transitions like Apple Dynamic Island
+   ============================================================ */
+.island {
+  position: relative;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.island__notch {
+  background: #000;
+  position: relative;
+  overflow: visible;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0,0,0,.6), 0 8px 24px rgba(0,0,0,.3);
+  /* Apple Dynamic Island spring transition */
+  transition: width .5s cubic-bezier(.175,.885,.32,1.1),
+              height .5s cubic-bezier(.175,.885,.32,1.1),
+              border-radius .4s ease-out,
+              box-shadow .4s ease-out;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 14px;
+  /* Default = compact */
+  width: 240px;
+  height: 36px;
+  border-radius: 0 0 14px 14px;
+}
+
+.island__notch:hover { filter: brightness(1.1); }
+/* :active scale removed — conflicts with layer transitions */
+
+/* Notch ear shadows */
+.island__notch::before,
+.island__notch::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  width: 13px;
+  height: 25px;
+  pointer-events: none;
+  transition: opacity .3s ease;
+}
+.island__notch::before {
+  left: -13px;
+  border-top-right-radius: 6px;
+  box-shadow: 5px 0 #000;
+}
+.island__notch::after {
+  right: -13px;
+  border-top-left-radius: 6px;
+  box-shadow: -5px 0 #000;
+}
+
+/* ============================================================
+   STATE SIZING — each state sets exact width/height/radius
+   Matches vibeisland.app JS: compact:{w:240,h:36,r:10}, etc.
+   ============================================================ */
+.island__notch[data-state="compact"] {
+  width: 240px; height: 36px; border-radius: 0 0 10px 10px;
+}
+.island__notch[data-state="overview"] {
+  width: 380px; height: 175px; border-radius: 0 0 14px 14px;
+}
+.island__notch[data-state="approval"] {
+  width: 380px; height: 220px; border-radius: 0 0 14px 14px;
+}
+.island__notch[data-state="ask"] {
+  width: 340px; height: 165px; border-radius: 0 0 14px 14px;
+}
+.island__notch[data-state="settings"] {
+  width: 380px; height: 380px; border-radius: 0 0 14px 14px;
+}
+
+/* Hide ear shadows when expanded */
+.island__notch:not([data-state="compact"])::before,
+.island__notch:not([data-state="compact"])::after {
+  opacity: 0;
+}
+
+/* ============================================================
+   LAYERS — all layers stacked, only active one visible
+   Matches vibeisland.app: .v6-layer / .v6-layer-active
+   ============================================================ */
+.v6-layer {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  filter: blur(6px);
+  transition: opacity .25s, filter .3s;
+  pointer-events: none;
+  overflow: hidden;
+  border-radius: inherit;
+  padding: 0 14px;
+}
+
+.v6-layer-active {
+  opacity: 1;
+  filter: blur(0);
+  transform: scale(1);
+  pointer-events: auto;
+  transition: opacity .2s, filter .25s, transform .3s var(--spring);
+  transition-delay: .04s;
+}
+
+/* Layer-specific layouts */
+.v6-layer[data-layer="compact"] {
+  gap: 8px;
+  font-family: var(--v6-mono);
+  font-size: 11px;
+  color: rgba(255,255,255,.5);
+}
+
+.v6-layer[data-layer="overview"],
+.v6-layer[data-layer="jump"] {
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
+  padding: 10px 12px;
+  gap: 3px;
+}
+
+.v6-layer[data-layer="approval"] {
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
+  padding: 12px 14px;
+  gap: 6px;
+}
+
+.v6-layer[data-layer="ask"] {
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
+  padding: 12px 14px;
+  gap: 6px;
+}
+
+.v6-layer[data-layer="settings"] {
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
+  padding: 12px 14px;
+  gap: 10px;
+  overflow-y: auto;
+}
+
+.v6-layer[data-layer="approved"] {
+  gap: 6px;
+  font-size: 14px;
+}
+
+/* ============================================================
+   COMPACT LAYER CONTENT
+   ============================================================ */
+.compact-pet { flex-shrink: 0; filter: drop-shadow(0 0 3px var(--vi-idle)); }
+.compact-text {
+  flex: 1;
+  font-size: 11px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.compact-count {
+  font-size: 9px;
+  font-weight: 600;
+  background: rgba(255,255,255,.12);
+  padding: 1px 5px;
+  border-radius: 4px;
+  color: rgba(255,255,255,.6);
+}
+
+/* ============================================================
+   SESSION CARDS
+   ============================================================ */
+.v6-sess {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  transition: background .15s;
+  font-size: 12px;
+  cursor: pointer;
+}
+.v6-sess:hover { background: rgba(255,255,255,.08); }
+
+/* Hero session */
+.v6-sess-hero {
+  align-items: flex-start;
+  padding: 8px;
+  gap: 10px;
+}
+.v6-sess-pet { flex-shrink: 0; margin-top: 4px; filter: drop-shadow(0 0 2px currentColor); }
+.v6-si { flex: 1; min-width: 0; }
+.v6-sess-r1 { display: flex; align-items: center; gap: 6px; }
+.v6-sess-r1 .v6-sn { flex: 1; }
+.v6-sn {
+  font-weight: 500;
+  color: #fff;
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.v6-st {
+  font-size: 9px;
+  font-weight: 500;
+  color: rgba(255,255,255,.5);
+  background: rgba(255,255,255,.1);
+  padding: 2px 5px;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+.v6-sess-dur { font-size: 9px; color: rgba(255,255,255,.35); flex-shrink: 0; }
+.v6-sess-you { font-size: 10px; color: rgba(255,255,255,.4); line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.v6-ss { font-size: 10px; line-height: 1.3; }
+
+/* Mini session */
+.v6-sess-mini { padding: 5px 8px; gap: 8px; }
+.v6-sd { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+.v6-sess-mini .v6-sn { flex: 1; font-size: 11px; font-weight: 400; color: rgba(255,255,255,.7); }
+.v6-sess-tags { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
+
+/* Session row stagger */
+.v6-sess { animation: row-in .25s ease both; }
+.v6-sess:nth-child(1) { animation-delay: 0s; }
+.v6-sess:nth-child(2) { animation-delay: .04s; }
+.v6-sess:nth-child(3) { animation-delay: .08s; }
+.v6-sess:nth-child(4) { animation-delay: .12s; }
+.v6-sess:nth-child(5) { animation-delay: .16s; }
+
+@keyframes row-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ============================================================
+   APPROVAL LAYER
+   ============================================================ */
+.v6-appr-head {
+  font-size: 11px;
+  color: rgba(255,255,255,.4);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.v6-appr-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--vi-alert);
+  animation: dot-pulse 1.8s ease-in-out infinite;
+}
+@keyframes dot-pulse { 0%,100% { opacity: 1; } 50% { opacity: .4; } }
+
+.v6-appr-tool { display: flex; align-items: center; gap: 6px; font-size: 12px; }
+.v6-appr-icon { font-size: 14px; opacity: .7; }
+.v6-appr-name { font-weight: 600; color: #fff; }
+.v6-appr-input { font-size: 11px; color: rgba(255,255,255,.5); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* Diff view */
+.v6-appr-ctx { margin: 4px 0; }
+.v6-diff { font-size: 10px; line-height: 1.5; border-radius: 6px; overflow: hidden; background: rgba(255,255,255,.03); }
+.v6-diff-line { padding: 1px 8px 1px 0; display: flex; white-space: pre; font-family: var(--v6-mono); }
+.v6-diff-ln { display: inline-block; width: 28px; text-align: right; padding-right: 8px; color: rgba(255,255,255,.2); flex-shrink: 0; }
+.v6-diff-ctx { color: rgba(255,255,255,.5); }
+.v6-diff-del { color: #f87171; background: rgba(248,113,113,.06); }
+.v6-diff-add { color: #4ade80; background: rgba(74,222,128,.06); }
+.v6-appr-diff { font-size: 10px; color: rgba(255,255,255,.35); margin-top: 4px; }
+
+/* Approval buttons */
+.v6-appr-btns { display: flex; gap: 6px; margin-top: 4px; }
+.v6-btn-deny,
+.v6-btn-allow {
+  flex: 1;
+  font-family: var(--v6-mono);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 7px 14px;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  transition: all .15s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+.v6-btn-deny { background: rgba(255,255,255,.08); color: rgba(255,255,255,.7); }
+.v6-btn-deny:hover { background: rgba(248,113,113,.12); color: #f87171; }
+.v6-btn-allow { background: rgba(255,255,255,.9); color: #000; }
+.v6-btn-allow:hover { background: #fff; }
+.v6-btn-deny kbd,
+.v6-btn-allow kbd {
+  font-family: var(--v6-mono);
+  font-size: 9px;
+  opacity: .5;
+  background: rgba(255,255,255,.1);
+  padding: 1px 4px;
+  border-radius: 3px;
+}
+
+/* ============================================================
+   ASK LAYER
+   ============================================================ */
+.v6-ask-head {
+  font-size: 11px;
+  color: rgba(255,255,255,.4);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.v6-ask-q { font-size: 13px; font-weight: 500; color: #fff; line-height: 1.4; }
+.v6-ask-opts { display: flex; flex-direction: column; gap: 4px; margin-top: 2px; }
+.v6-ask-opt {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: 1px solid rgba(255,255,255,.08);
+  background: transparent;
+  color: rgba(255,255,255,.6);
+  font-family: var(--v6-mono);
+  font-size: 11px;
+  cursor: pointer;
+  transition: all .15s ease;
+}
+.v6-ask-opt:hover { background: rgba(6,182,212,.08); border-color: rgba(6,182,212,.2); color: rgba(255,255,255,.9); }
+.v6-ask-num { font-size: 10px; opacity: .4; }
+
+/* Claude Desktop redirect hint */
+.v6-ask-desktop-hint {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 10px 8px 6px;
+  border-radius: 8px;
+  background: rgba(6,182,212,.06);
+  border: 1px solid rgba(6,182,212,.12);
+  margin-top: 4px;
+}
+.v6-ask-desktop-icon {
+  font-size: 18px;
+  color: var(--vi-question);
+  animation: hint-bounce 1.5s ease-in-out infinite;
+}
+.v6-ask-desktop-text {
+  font-size: 11px;
+  font-weight: 500;
+  color: rgba(255,255,255,.8);
+  text-align: center;
+}
+.v6-ask-desktop-sub {
+  font-size: 9px;
+  color: rgba(255,255,255,.35);
+  text-align: center;
+}
+@keyframes hint-bounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-3px); }
+}
+
+/* ============================================================
+   APPROVED LAYER
+   ============================================================ */
+.v6-approved-check { color: var(--vi-idle); font-size: 16px; }
+.v6-approved-text { color: var(--vi-idle); font-weight: 600; }
+
+/* ============================================================
+   SETTINGS LAYER
+   ============================================================ */
+.settings-topbar { display: flex; align-items: center; gap: 8px; }
+.settings-back { background: none; border: none; color: rgba(255,255,255,.5); cursor: pointer; font-size: 14px; padding: 2px 6px; border-radius: 4px; transition: all .15s ease; }
+.settings-back:hover { color: #fff; }
+.settings-title { font-family: var(--v6-mono); font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: .12em; color: rgba(255,255,255,.4); }
+.settings-version { font-size: 9px; color: rgba(255,255,255,.2); margin-left: auto; }
+.settings-section h4 { font-family: var(--v6-mono); font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: .1em; color: rgba(255,255,255,.3); margin-bottom: 6px; }
+.settings-toggle { display: flex; align-items: center; gap: 8px; font-size: 11px; cursor: pointer; padding: 2px 0; color: rgba(255,255,255,.7); }
+.settings-toggle:hover { color: #fff; }
+.settings-toggle input[type="checkbox"] { accent-color: var(--vi-work); width: 14px; height: 14px; }
+.settings-row { display: flex; align-items: center; justify-content: space-between; padding: 2px 0; }
+.settings-row-label { font-size: 11px; color: rgba(255,255,255,.5); }
+.settings-radio-group { display: flex; gap: 4px; }
+.settings-radio { font-family: var(--v6-mono); font-size: 10px; font-weight: 600; padding: 3px 8px; border-radius: 4px; border: 1px solid rgba(255,255,255,.08); background: transparent; color: rgba(255,255,255,.4); cursor: pointer; transition: all .15s ease; }
+.settings-radio:hover { color: rgba(255,255,255,.7); border-color: rgba(255,255,255,.15); }
+.settings-radio--active { background: rgba(59,130,246,.12); border-color: rgba(59,130,246,.3); color: var(--vi-work); }
+.settings-hook-row { display: flex; align-items: center; justify-content: space-between; padding: 4px 0; border-top: 1px solid rgba(255,255,255,.03); }
+.settings-hook-name { font-family: var(--v6-mono); font-size: 11px; font-weight: 500; }
+.settings-hook-status--installed { color: var(--vi-idle); font-size: 12px; }
+.settings-hook-btn { font-family: var(--v6-mono); font-size: 10px; font-weight: 600; padding: 3px 8px; border-radius: 4px; border: 1px solid rgba(255,255,255,.1); background: transparent; color: rgba(255,255,255,.6); cursor: pointer; transition: all .15s ease; }
+.settings-hook-btn:hover { background: rgba(255,255,255,.06); color: #fff; }
+.settings-section--info { border-top: 1px solid rgba(255,255,255,.04); padding-top: 8px; }
+.settings-info { display: flex; flex-direction: column; gap: 2px; font-size: 11px; color: rgba(255,255,255,.4); }
+.settings-info-detail { font-size: 10px; color: rgba(255,255,255,.2); }
+
+/* ============================================================
+   EMPTY STATE
+   ============================================================ */
+.empty-layer { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 24px 16px; gap: 4px; }
+.empty-layer__text { font-size: 11px; color: rgba(255,255,255,.3); }
+.empty-layer__hint { font-size: 9px; color: rgba(255,255,255,.15); }
+
+/* ============================================================
+   ICON BUTTON
+   ============================================================ */
+.icon-btn {
+  display: flex; align-items: center; justify-content: center;
+  width: 20px; height: 20px;
+  border: none; background: none;
+  color: rgba(255,255,255,.3);
+  cursor: pointer; border-radius: 4px;
+  font-size: 12px; transition: all .15s ease;
+}
+.icon-btn:hover { color: rgba(255,255,255,.7); background: rgba(255,255,255,.06); }
+
+/* ============================================================
+   SCROLLBAR
+   ============================================================ */
+::-webkit-scrollbar { width: 3px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(255,255,255,.08); border-radius: 2px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,.15); }
