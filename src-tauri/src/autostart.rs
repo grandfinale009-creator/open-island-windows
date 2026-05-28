@@ -30,7 +30,7 @@ impl AutoStartManager {
 
         let exe_path = std::env::current_exe()?;
         // Quote the path and add --silent flag for startup
-        let exe_str = format!("\"{}\" --silent", exe_path.display());
+        let exe_str = format!("\"{}\"", exe_path.display());
 
         let hkcu = RegKey::predef(HKEY_CURRENT_USER);
         let path = r"Software\Microsoft\Windows\CurrentVersion\Run";
